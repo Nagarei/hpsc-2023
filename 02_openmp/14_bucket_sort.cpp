@@ -4,7 +4,7 @@
 
 int main() {
   int n = 50;
-  int range = 5;
+  int range = 10;
   std::vector<int> key(n);
   for (int i=0; i<n; i++) {
     key[i] = rand() % range;
@@ -13,15 +13,24 @@ int main() {
   printf("\n");
 
   std::vector<int> bucket(range,0); 
-  for (int i=0; i<n; i++)
-    bucket[key[i]]++;
+  int*const bucket_arr = bucket.data();
   std::vector<int> offset(range,0);
-  for (int i=1; i<range; i++) 
-    offset[i] = offset[i-1] + bucket[i-1];
-  for (int i=0; i<range; i++) {
-    int j = offset[i];
-    for (; bucket[i]>0; bucket[i]--) {
-      key[j++] = i;
+  int*const offset_arr = offset.data();
+  #pragma omp parallel
+  {
+    #pragma omp for reduction (+:bucket_arr[0:n])
+    for (int i=0; i<n; i++)
+      bucket_arr[key[i]]++;
+    #pragma omp single
+    for (int i=1; i<range; i++) 
+      offset_arr[i] = offset_arr[i-1] + bucket_arr[i-1];
+    #pragma omp for
+    for (int i=0; i<range; i++) {
+      int begin = offset[i];
+      //#pragma omp for
+      for (int j = 0; j < bucket[i]; ++j) {
+        key[begin + j] = i;
+      }
     }
   }
 
