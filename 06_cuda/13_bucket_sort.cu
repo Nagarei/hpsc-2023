@@ -60,6 +60,7 @@ __global__ void cumulative_bucket(unsigned int* bucket)
     __syncwarp();
     //if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", s_bucket[i]); } printf("GPU3 up%d\n", s); }
   }
+  __syncthreads();
   for (;s < RANGE; s <<= 1) {
     for (int offset = 0; offset < RANGE; offset += (blockDim_x<<1)) {
       const int i = offset + me;
@@ -69,30 +70,31 @@ __global__ void cumulative_bucket(unsigned int* bucket)
       }
     }
     __syncthreads();
-    if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", (int)s_bucket[i]); } printf("GPU3 up%d\n", (int)s); }
+    //if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", (int)s_bucket[i]); } printf("GPU3 up%d\n", (int)s); }
   }
   //down-sweep
-  __syncthreads();//DEBUG
   if(idx==blockDim_x-1) { s_bucket[RANGE - 1] = 0; }
+  __syncthreads();
   s >>= 1;
   for (; s >= (32<<1); s >>= 1) {
-    if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", (int)s_bucket[i]); } printf("GPU3 dn%d\n", (int)s); }__syncthreads();
-    /*for (int offset = 0; offset < RANGE; offset += (blockDim_x<<1)) {
+    //__syncthreads();if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", (int)s_bucket[i]); } printf("GPU3 dn%d\n", (int)s); }__syncthreads();
+    for (int offset = 0; offset < RANGE; offset += (blockDim_x<<1)) {
       const int i = offset + me;
-      if(i < RANGE && (i + 1) % (s<<1) == 0)printf("%d:%d/", int(i + 1), int((i + 1) % (s*2)));
+      //if(i < RANGE && (i + 1) % (s<<1) == 0)printf("%d:%d/", int(i + 1), int((i + 1) % (s*2)));
       if (i < RANGE && (i + 1) % (s<<1) == 0) {
         const auto tmp = s_bucket[i - s];
         s_bucket[i - s] = s_bucket[i];
         s_bucket[i] = s_bucket[i] + tmp;
       }
-      if(i < RANGE && (i + 1) % (s<<1) == 0)printf("%d<->%d/", s_bucket[i - s],s_bucket[i]);
-    }*/
+      //if(i < RANGE && (i + 1) % (s<<1) == 0)printf("%d<->%d/", s_bucket[i - s],s_bucket[i]);
+    }
     __syncthreads();
-    if(idx==0){printf("\n");for (int i = 0; i < RANGE; ++i) { printf("%d,", (int)s_bucket[i]); } printf("GPU3 dn%d\n", (int)s); }
+    //if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", (int)s_bucket[i]); } printf("GPU3 dn%d\n", (int)s); }__syncthreads();
   }
   for (; s > 0; s >>= 1) {
     for (int offset = 0; offset < RANGE; offset += (blockDim_x<<1)) {
       const int i = offset + me;
+      //if(i < RANGE && (i + 1) % (s<<1) == 0)printf("%d:%d<->%d/", int(i + 1), int(s_bucket[i]), int(s_bucket[i - s]+s_bucket[i]));
       if (i < RANGE && (i + 1) % (s<<1) == 0) {
         const auto tmp = s_bucket[i - s];
         s_bucket[i - s] = s_bucket[i];
@@ -100,10 +102,11 @@ __global__ void cumulative_bucket(unsigned int* bucket)
       }
     }
     __syncwarp();
-    //if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", s_bucket[i]); } printf("GPU3\n"); }
+    //__syncthreads();if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", (int)s_bucket[i]); } printf("GPU3 dn%d\n", (int)s); }__syncthreads();
   }
 
   //write back
+  __syncthreads();
   for (int i = threadIdx.x; i < RANGE; i += blockDim_x) {
     bucket[i] = s_bucket[i];
   }
@@ -122,7 +125,7 @@ __global__ void output_bucket(int* arr, unsigned int* bucket)
     s_bucket[i] = bucket[i];
   }
   __syncthreads();
-  if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", s_bucket[i]); } printf("GPU3\n"); }
+  //if(idx==0){for (int i = 0; i < RANGE; ++i) { printf("%d,", s_bucket[i]); } printf("GPU3\n"); }
 
   if (idx < N) {
     int ok = 0, ng = RANGE;  
@@ -171,10 +174,10 @@ void bucket_sort(int* begin) {
 }
 
 int main() {
-  constexpr int n = 50;
-  constexpr int range = 70;
+  constexpr int n = 500000;
+  constexpr int range = 5000;
   std::vector<int> key(n);
-  for (int i=0; i<n; i++) {
+  for (int i=0; i<std::min(50,n); i++) {
     key[i] = rand() % range;
     printf("%d ",key[i]);
   }
@@ -184,7 +187,7 @@ int main() {
   std::sort(key_cpy.begin(), key_cpy.end());
   bucket_sort<n,range>(key.data());
 
-  for (int i=0; i<n; i++) {
+  for (int i=0; i<std::min(50,n); i++) {
     printf("%d ",key[i]);
   }
   printf("\n");
