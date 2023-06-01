@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <cmath>
 
 constexpr int nx = 41;
 constexpr int ny = 41;
@@ -20,13 +21,55 @@ inline constexpr T pow2(const T& v) {
   return v*v;
 }
 
+
 using MATRIX = std::array<std::array<double, nx>, ny>;
+void pyplot_array(const MATRIX& m) {
+    auto convert = [](double d)->double {
+        if (std::isfinite(d)) { return d; }
+        if (std::signbit(d)) { return -1e18; }
+        return 1e18;
+    };
+    std::cout << "np.array([\n";
+    for(int h = 0; h < ny; ++h){
+        std::cout << '[';
+        for(auto& vv : m[h]){ std::cout << convert(vv) << ','; }
+        std::cout << "],";
+    }
+    std::cout << "])\n";
+}
 void pyplot(const MATRIX& u, const MATRIX&  v, const MATRIX& p) {
     //TODO
+    std::cout << "u=";
+    pyplot_array(u);
+
+    std::cout << "v=";
+    pyplot_array(v);
+
+    std::cout << "p=";
+    pyplot_array(p);
+
+    std::cout << R"(
+plt.contourf(X, Y, p, alpha=0.5, cmap=plt.cm.coolwarm)
+plt.quiver(X[::2, ::2], Y[::2, ::2], u[::2, ::2], v[::2, ::2])
+plt.pause(.01)
+plt.clf()
+
+)";
 }
 
 int main()
 {
+  //init pyplot
+  std::cout << R"(
+import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(0, 2, )" << nx << R"()
+y = np.linspace(0, 2, )" << ny << R"()
+X, Y = np.meshgrid(x, y)
+
+)";
+
   
   static std::array<double, nx> x;
   for(int i = 0; i < nx; ++i){ x[i] = dx * i; }
@@ -101,7 +144,10 @@ int main()
       }
       
       pyplot(p,u,v);
-    }
-    
-    return 0;
+  }
+
+  //finalize pyplot
+  std::cout << "plt.show()" << std::endl;
+   
+  return 0;
 }
