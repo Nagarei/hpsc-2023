@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <array>
 
 constexpr int nx = 41;
 constexpr int ny = 41;
@@ -20,7 +21,7 @@ inline constexpr T pow2(const T& v) {
 }
 
 using MATRIX = std::array<std::array<double, nx>, ny>;
-void pyplot(const MATRIX& nu, const MATRIX&  nv, const MATRIX& np) {
+void pyplot(const MATRIX& u, const MATRIX&  v, const MATRIX& p) {
     //TODO
 }
 
@@ -50,7 +51,7 @@ int main()
           }
       }
       //
-      for(int it = 0; n < nit; ++n):{
+      for(int it = 0; n < nit; ++n){
           auto& p = p_[(n+it)%2];
           auto& pn = p_[((n+it)%2)^1];
           //pn = p.copy();
@@ -62,24 +63,24 @@ int main()
                             / (2 * pow2(dx * dy));
               }
           }
-          p[:, -1] = p[:, -2];
-          p[0, :] = p[1, :];
-          p[:, 0] = p[:, 1];
-          p[-1, :] = 0;;
+      	  for(int h = 0; h < ny; ++h){ p[h][nx-1] = p[h][nx-2]; }
+          for(int w = 0; w < nx; ++w){ p[0][w] = p[1][w]; }
+          for(int h = 0; h < ny; ++h){ p[h][0] = p[h][1]; }
+          for(int w = 0; w < nx; ++w){ p[ny-1][w] = 0; }
       }
-      auto& pn = p_[((n+nit)%2)^1];
+      auto& p = p_[((n+nit)%2)^1];
       for(int h = 1; h < ny-1; ++h){
           for(int w = 1; w < nx-1; ++w){
               u[h][w] = un[h][w] - un[h][w] * dt / dx * (un[h][w] - un[h][w-1])
                                  - un[h][w] * dt / dy * (un[h][w] - un[h-1][w])
-                                 - dt / (2 * rho * dx) * (pn[h][w+1] - pn[h][w-1])
+                                 - dt / (2 * rho * dx) * (p[h][w+1] - p[h][w-1])
                                  + nu * dt / pow2(dx) * (un[h][w+1] - 2 * un[h][w] + un[h][w-1])
-                                 + nu * dt / pow2(dy) * (un[j+1, i] - 2 * un[h][w] + un[h-1][w]);
+                                 + nu * dt / pow2(dy) * (un[h+1][w] - 2 * un[h][w] + un[h-1][w]);
               v[h][w] = vn[h][w] - vn[h][w] * dt / dx * (vn[h][w] - vn[h][w-1])
                                  - vn[h][w] * dt / dy * (vn[h][w] - vn[h-1][w])
-                                 - dt / (2 * rho * dx) * (pn[j+1, i] - pn[h-1][w])
+                                 - dt / (2 * rho * dx) * (p[h+1][w] - p[h-1][w])
                                  + nu * dt / pow2(dx) * (vn[h][w+1] - 2 * vn[h][w] + vn[h][w-1])
-                                 + nu * dt / pow2(dy) * (vn[j+1, i] - 2 * vn[h][w] + vn[h-1][w]);
+                                 + nu * dt / pow2(dy) * (vn[h+1][w] - 2 * vn[h][w] + vn[h-1][w]);
           }
       }
       for(int h = 0; h < ny; ++h){
