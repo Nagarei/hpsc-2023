@@ -6,16 +6,16 @@
 #include <iomanip>
 #include <cassert>
 
-constexpr int nx = 41;
-constexpr int ny = 41;
-constexpr int nt = 500;
+constexpr int nx = 101;
+constexpr int ny = 101;
+constexpr int nt = 1500;
 constexpr int nit = 50;
 
 constexpr double range_l = 0;
 constexpr double range_r = 2;
 constexpr double dx = (range_r - range_l) / static_cast<double>(nx - 1);
 constexpr double dy = (range_r - range_l) / static_cast<double>(ny - 1);
-constexpr double dt = 0.01;
+constexpr double dt = 0.003;
 constexpr double rho = 1;
 constexpr double nu = 0.02;
 
@@ -26,17 +26,12 @@ __host__ __device__ inline constexpr T pow2(const T& v) {
 
 
 using MATRIX = std::array<std::array<double, nx>, ny>;
-std::ofstream pyplot_out{ "pyplot.py" };
+//std::ofstream pyplot_out{ "pyplot.py" };
+auto& pyplot_out = std::cout;
 void pyplot_init() {
-	pyplot_out << R"(
-import numpy as np
-import matplotlib.pyplot as plt
-
-x = np.linspace(0, 2, )" << nx << R"()
-y = np.linspace(0, 2, )" << ny << R"()
-X, Y = np.meshgrid(x, y)
-
-)";
+	pyplot_out << nx << "\n"
+		<< ny << "\n"
+		<< nt << "\n";
 }
 void pyplot_array(const MATRIX& m) {
 	auto convert = [](double d)->double {
@@ -44,37 +39,19 @@ void pyplot_array(const MATRIX& m) {
 		if (std::signbit(d)) { return -1e18; }
 		return 1e18;
 	};
-	pyplot_out << "np.array([";
 	for (int h = 0; h < ny; ++h) {
-		pyplot_out << '[';
 		for (auto& vv : m[h]) {
 			pyplot_out
-				<< convert(vv) << ',';
+				<< convert(vv) << '\n';
 		}
-		pyplot_out << "],";
 	}
-	pyplot_out << "])\n";
 }
 void pyplot(const MATRIX& u, const MATRIX& v, const MATRIX& p) {
 
-	pyplot_out << "u=";
 	pyplot_array(u);
-
-	pyplot_out << "v=";
 	pyplot_array(v);
-
-	pyplot_out << "p=";
 	pyplot_array(p);
 
-	pyplot_out << R"(
-plt.contourf(X, Y, p, alpha=0.5, cmap=plt.cm.coolwarm)
-plt.quiver(X[::2, ::2], Y[::2, ::2], u[::2, ::2], v[::2, ::2])
-plt.pause(.001)
-plt.clf()
-del u
-del v
-del p
-)";
 }
 
 __global__ void step1(double* out_b, double* prev_u, double* prev_v) {
@@ -204,19 +181,16 @@ void run()
 		cudaMemcpyAsync(host_u[0].data(), u, nx*ny*sizeof(double), cudaMemcpyDeviceToHost);
 		cudaMemcpyAsync(host_v[0].data(), v, nx*ny*sizeof(double), cudaMemcpyDeviceToHost);
 		cudaMemcpyAsync(host_p[0].data(), p, nx*ny*sizeof(double), cudaMemcpyDeviceToHost);
-		pyplot_out << "plt.title(\"" << n << "\")\n";
 		cudaDeviceSynchronize();
 		//pyplot(host_u, host_v, host_p);
 	}
 	pyplot(host_u, host_v, host_p);
 
-	//finalize pyplot
-	pyplot_out << "plt.show()" << std::endl;
 }
 
 int main()
 {
 	run();
-	system("python3 pyplot.py");
+	//system("python3 pyplot.py");
 	return 0;
 }
