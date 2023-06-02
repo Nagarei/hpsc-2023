@@ -20,9 +20,11 @@ for t in range(nt):
   input_arr(u)
   input_arr(v)
   input_arr(p)
+  plt.clf()
   plt.title(t)
   plt.contourf(X, Y, p, alpha=0.5, cmap=plt.cm.coolwarm)
   plt.quiver(X[::2, ::2], Y[::2, ::2], u[::2, ::2], v[::2, ::2])
   plt.pause(.001)
-  plt.clf()
+
+plt.show()
 
