@@ -200,13 +200,15 @@ void run()
 		auto p = p_ + (((n + nit) % 2 != 0) ? 0 : nx * ny);
 		step3<<<block_num, 1024>>>(u, v, un, vn, p);
 
+		if (0 < n) { pyplot(host_u, host_v, host_p); }//前ループの値を出力
 		cudaMemcpyAsync(host_u[0].data(), u, nx*ny*sizeof(double), cudaMemcpyDeviceToHost);
 		cudaMemcpyAsync(host_v[0].data(), v, nx*ny*sizeof(double), cudaMemcpyDeviceToHost);
 		cudaMemcpyAsync(host_p[0].data(), p, nx*ny*sizeof(double), cudaMemcpyDeviceToHost);
 		pyplot_out << "plt.title(\"" << n << "\")\n";
 		cudaDeviceSynchronize();
-		pyplot(host_u, host_v, host_p);
+		//pyplot(host_u, host_v, host_p);
 	}
+	pyplot(host_u, host_v, host_p);
 
 	//finalize pyplot
 	pyplot_out << "plt.show()" << std::endl;
